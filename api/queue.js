@@ -2,47 +2,50 @@ const BASE = `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}`;
 const TABLE = 'tblurl5fsAX6wZW1c';
 const AT_HEADERS = { Authorization: `Bearer ${process.env.AIRTABLE_API_KEY}` };
 
-export const config = { runtime: 'nodejs' };
+exports.handler = async (event) => {
+  const cors = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type'
+  };
 
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: cors, body: '' };
 
   try {
-    if (req.method === 'GET') {
-      const filter = req.query.filter
-        ? `filterByFormula={Status}='${req.query.filter}'`
+    if (event.httpMethod === 'GET') {
+      const filter = event.queryStringParameters?.filter
+        ? `filterByFormula={Status}='${event.queryStringParameters.filter}'`
         : `filterByFormula=NOT({Status}='Archived')`;
       const r = await fetch(
         `${BASE}/${TABLE}?${filter}&sort[0][field]=Publish%20Date&sort[0][direction]=desc&maxRecords=50`,
         { headers: AT_HEADERS }
       );
-      return res.json(await r.json());
+      return { statusCode: 200, headers: { ...cors, 'Content-Type': 'application/json' }, body: await r.text() };
     }
 
-    if (req.method === 'POST') {
+    const body = JSON.parse(event.body || '{}');
+
+    if (event.httpMethod === 'POST') {
       const r = await fetch(`${BASE}/${TABLE}`, {
         method: 'POST',
         headers: { ...AT_HEADERS, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ records: [{ fields: req.body }] })
+        body: JSON.stringify({ records: [{ fields: body }] })
       });
-      return res.json(await r.json());
+      return { statusCode: 200, headers: { ...cors, 'Content-Type': 'application/json' }, body: await r.text() };
     }
 
-    if (req.method === 'PATCH') {
-      const { id, fields } = req.body;
+    if (event.httpMethod === 'PATCH') {
+      const { id, fields } = body;
       const r = await fetch(`${BASE}/${TABLE}/${id}`, {
         method: 'PATCH',
         headers: { ...AT_HEADERS, 'Content-Type': 'application/json' },
         body: JSON.stringify({ fields })
       });
-      return res.json(await r.json());
+      return { statusCode: 200, headers: { ...cors, 'Content-Type': 'application/json' }, body: await r.text() };
     }
 
-    res.status(405).json({ error: 'Method not allowed' });
+    return { statusCode: 405, headers: cors, body: 'Method not allowed' };
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return { statusCode: 500, headers: cors, body: JSON.stringify({ error: e.message }) };
   }
-}
+};
