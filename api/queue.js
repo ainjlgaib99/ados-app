@@ -2,6 +2,8 @@ const BASE = `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}`;
 const TABLE = 'tblurl5fsAX6wZW1c';
 const AT_HEADERS = { Authorization: `Bearer ${process.env.AIRTABLE_API_KEY}` };
 
+export const config = { runtime: 'nodejs' };
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
